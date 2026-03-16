@@ -457,7 +457,8 @@ export default function RoadmapDetailPage() {
             <BookOpen size={16} className="text-dash-primary" />
             Curriculum ({modules.length} modules)
           </h2>
-          <div className="space-y-3">
+          {/* Scrollable modules panel — max-h ensures it never exceeds viewport height */}
+          <div className="space-y-3 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
             {modules.map((mod, i) => (
               <ModuleAccordion
                 key={mod._id}

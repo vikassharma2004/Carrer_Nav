@@ -18,12 +18,18 @@ import LearnerDashboard     from './pages/dashboard/LearnerDashboard'
 import MentorDashboard      from './pages/dashboard/MentorDashboard'
 import AdminDashboard       from './pages/dashboard/AdminDashboard'
 
+/* ── Admin sub-pages ────────────────────────────────────────── */
+import UsersManagementPage     from './pages/admin/UsersManagementPage'
+import OnboardingRequestsPage  from './pages/admin/OnboardingRequestsPage'
+import BillingPlansPage        from './pages/admin/BillingPlansPage'
+
 /* ── Other app pages ────────────────────────────────────────── */
 import RoadmapsPage         from './pages/roadmaps/RoadmapsPage'
 import RoadmapDetailPage    from './pages/roadmaps/RoadmapDetailPage'
 import CommunityPage        from './pages/community/CommunityPage'
 import ProfilePage          from './pages/profile/ProfilePage'
 import AIAssistantPage      from './pages/ai/AIAssistantPage'
+import TasksPage            from './pages/tasks/TasksPage'
 
 /* ── Guards ─────────────────────────────────────────────────── */
 import RequireAuth          from './components/shared/RequireAuth'
@@ -84,17 +90,23 @@ export default function App() {
             <Route path="/dashboard/mentor"  element={<MentorDashboard />} />
             <Route path="/dashboard/admin"   element={<AdminDashboard />} />
 
-            {/* Shared pages */}
-            <Route path="/roadmaps"          element={<RoadmapsPage />} />
-            <Route path="/roadmaps/:roadmapId" element={<RoadmapDetailPage />} />
-            <Route path="/community"         element={<CommunityPage />} />
-            <Route path="/ai"                element={<AIAssistantPage />} />
-            <Route path="/profile"           element={<ProfilePage />} />
+            {/* Admin sub-pages */}
+            <Route path="/dashboard/admin/users"      element={<UsersManagementPage />} />
+            <Route path="/dashboard/admin/onboarding" element={<OnboardingRequestsPage />} />
+            <Route path="/dashboard/admin/billing"    element={<BillingPlansPage />} />
 
-            {/* Placeholder routes */}
-            <Route path="/tasks"      element={<ComingSoon title="My Tasks" />} />
-            <Route path="/bookmarks"  element={<ComingSoon title="Bookmarks" />} />
-            <Route path="/settings"   element={<ComingSoon title="Settings" />} />
+            {/* Shared pages */}
+            <Route path="/roadmaps"            element={<RoadmapsPage />} />
+            <Route path="/roadmaps/:roadmapId" element={<RoadmapDetailPage />} />
+            <Route path="/community"                   element={<CommunityPage />} />
+            <Route path="/community/:communityId"      element={<CommunityPage />} />
+            <Route path="/ai"                  element={<AIAssistantPage />} />
+            <Route path="/profile"             element={<ProfilePage />} />
+
+            {/* Task page */}
+            <Route path="/tasks"     element={<TasksPage />} />
+            <Route path="/bookmarks" element={<ComingSoon title="Bookmarks" />} />
+            <Route path="/settings"  element={<ComingSoon title="Settings" />} />
           </Route>
         </Route>
 

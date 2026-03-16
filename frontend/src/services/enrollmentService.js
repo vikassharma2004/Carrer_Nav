@@ -9,9 +9,13 @@ const enrollmentService = {
   drop: (roadmapId) =>
     api.delete(`/roadmaps/${roadmapId}/enroll`).then((r) => r.data),
 
-  /** GET /roadmaps/:roadmapId/enroll — check enrollment status */
-  getStatus: (roadmapId) =>
-    api.get(`/roadmaps/${roadmapId}/enroll`).then((r) => r.data),
+  /** GET /me/enrollments — get all user enrollments */
+  getMyEnrollments: () =>
+    api.get('/me/enrollments').then((r) => r.data),
+
+  /** GET /me/enrollments/tasks — get tasks for all user enrollments */
+  getTasksForMyEnrollments: () =>
+    api.get('/modules/enrollments/tasks/all').then((r) => r.data),
 }
 
 export default enrollmentService

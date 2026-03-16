@@ -2,44 +2,43 @@ import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Search,
-  Bell,
-  ChevronDown,
-  LogOut,
-  UserCircle,
-  Settings,
-  X,
-  Menu,
+  Search, Bell, ChevronDown, LogOut, UserCircle, Settings,
+  X, Menu,
 } from 'lucide-react'
 import useAuthStore from '../../store/useAuthStore'
 
 const PAGE_TITLES = {
-  '/dashboard':  'Dashboard',
-  '/roadmaps':   'Roadmaps',
-  '/community':  'Community',
-  '/tasks':      'My Tasks',
-  '/ai':         'AI Assistant',
-  '/bookmarks':  'Bookmarks',
-  '/profile':    'Profile',
-  '/settings':   'Settings',
+  '/dashboard/learner':            'Dashboard',
+  '/dashboard/mentor':             'Dashboard',
+  '/dashboard/admin':              'Admin Dashboard',
+  '/dashboard/admin/users':        'User Management',
+  '/dashboard/admin/onboarding':   'Onboarding Requests',
+  '/dashboard/admin/billing':      'Billing Plans',
+  '/roadmaps':                     'Roadmaps',
+  '/community':                    'Community',
+  '/tasks':                        'My Tasks',
+  '/ai':                           'AI Assistant',
+  '/bookmarks':                    'Bookmarks',
+  '/profile':                      'Profile',
+  '/settings':                     'Settings',
 }
 
 const MOCK_NOTIFS = [
-  { id: 1, text: 'New task added to React Roadmap',       time: '2m ago',  read: false },
-  { id: 2, text: 'Your mentor replied to your question',  time: '1h ago',  read: false },
-  { id: 3, text: 'Community post got 12 reactions',       time: '3h ago',  read: true  },
+  { id: 1, text: 'New task added to React Roadmap',      time: '2m ago',  read: false },
+  { id: 2, text: 'Your mentor replied to your question', time: '1h ago',  read: false },
+  { id: 3, text: 'Community post got 12 reactions',      time: '3h ago',  read: true  },
 ]
 
-export default function TopNavbar() {
+export default function TopNavbar({ onMobileMenuToggle }) {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
 
   const [showNotifs, setShowNotifs] = useState(false)
-  const [showUser, setShowUser]     = useState(false)
-  const [search, setSearch]         = useState('')
+  const [showUser,   setShowUser]   = useState(false)
+  const [search,     setSearch]     = useState('')
 
-  const title = PAGE_TITLES[location.pathname] ?? 'Dashboard'
+  const title  = PAGE_TITLES[location.pathname] ?? 'Dashboard'
   const unread = MOCK_NOTIFS.filter((n) => !n.read).length
 
   const handleLogout = async () => {
@@ -48,14 +47,22 @@ export default function TopNavbar() {
   }
 
   return (
-    <header className="h-[60px] shrink-0 bg-dash-card border-b border-dash-border flex items-center px-5 gap-4 relative z-30">
+    <header className="h-[60px] shrink-0 bg-dash-card border-b border-dash-border flex items-center px-4 gap-3 relative z-30">
 
-      {/* ── Page title (left) ────────────────── */}
+      {/* ── Mobile hamburger ─────────────────────── */}
+      <button
+        onClick={onMobileMenuToggle}
+        className="lg:hidden p-2 rounded-lg text-dash-muted hover:text-dash-text hover:bg-dash-sidebar-h transition-colors shrink-0"
+      >
+        <Menu size={18} />
+      </button>
+
+      {/* ── Page title ──────────────────────────── */}
       <div className="flex-1 min-w-0">
-        <h1 className="font-semibold text-[15px] text-dash-text">{title}</h1>
+        <h1 className="font-semibold text-[15px] text-dash-text truncate">{title}</h1>
       </div>
 
-      {/* ── Search ──────────────────────────── */}
+      {/* ── Search ──────────────────────────────── */}
       <div className="relative hidden sm:flex items-center w-52 xl:w-72">
         <Search className="absolute left-3 text-dash-muted" size={14} />
         <input
@@ -66,7 +73,7 @@ export default function TopNavbar() {
         />
       </div>
 
-      {/* ── Notifications ───────────────────── */}
+      {/* ── Notifications ───────────────────────── */}
       <div className="relative">
         <button
           onClick={() => { setShowNotifs(!showNotifs); setShowUser(false) }}
@@ -111,7 +118,7 @@ export default function TopNavbar() {
         </AnimatePresence>
       </div>
 
-      {/* ── User menu ───────────────────────── */}
+      {/* ── User menu ───────────────────────────── */}
       <div className="relative">
         <button
           onClick={() => { setShowUser(!showUser); setShowNotifs(false) }}

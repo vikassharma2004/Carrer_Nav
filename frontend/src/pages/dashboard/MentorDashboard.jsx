@@ -5,6 +5,7 @@ import {
   Map, Users, CheckSquare, Star,
   ArrowRight, BookOpen, Plus, TrendingUp,
   Eye, ToggleLeft, ToggleRight, Loader2,
+  DollarSign, Clock, CreditCard, BarChart3,
 } from 'lucide-react'
 import useAuthStore from '../../store/useAuthStore'
 import roadmapService from '../../services/roadmapService'
@@ -13,16 +14,23 @@ const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } 
 const item      = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: 'easeOut' } } }
 
 const DOMAIN_COLORS = {
-  frontend:      'bg-blue-100 text-blue-700',
-  backend:       'bg-green-100 text-green-700',
-  fullstack:     'bg-purple-100 text-purple-700',
-  mobile:        'bg-pink-100 text-pink-700',
-  devops:        'bg-amber-100 text-amber-700',
+  frontend:        'bg-blue-100 text-blue-700',
+  backend:         'bg-green-100 text-green-700',
+  fullstack:       'bg-purple-100 text-purple-700',
+  mobile:          'bg-pink-100 text-pink-700',
+  devops:          'bg-amber-100 text-amber-700',
   'system-design': 'bg-indigo-100 text-indigo-700',
-  data:          'bg-teal-100 text-teal-700',
-  'ai-ml':       'bg-rose-100 text-rose-700',
-  security:      'bg-red-100 text-red-700',
+  data:            'bg-teal-100 text-teal-700',
+  'ai-ml':         'bg-rose-100 text-rose-700',
+  security:        'bg-red-100 text-red-700',
 }
+
+/* ── Mock earnings data ───────────────────────────────────────── */
+const MOCK_EARNINGS_HISTORY = [
+  { month: 'Jan 2026', amount: 320,  enrollments: 8,  status: 'paid' },
+  { month: 'Feb 2026', amount: 480,  enrollments: 12, status: 'paid' },
+  { month: 'Mar 2026', amount: 560,  enrollments: 14, status: 'pending' },
+]
 
 function StatCard({ icon: Icon, label, value, color, sub }) {
   return (
@@ -32,6 +40,21 @@ function StatCard({ icon: Icon, label, value, color, sub }) {
       </div>
       <div>
         <p className="text-2xl font-bold text-dash-text">{value}</p>
+        <p className="text-[12px] text-dash-muted mt-0.5">{label}</p>
+        {sub && <p className="text-[11px] text-dash-primary font-medium mt-0.5">{sub}</p>}
+      </div>
+    </motion.div>
+  )
+}
+
+function EarningsStatCard({ icon: Icon, label, value, color, sub }) {
+  return (
+    <motion.div variants={item} className="dash-card dash-card-hover p-4 flex items-start gap-3">
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
+        <Icon size={18} />
+      </div>
+      <div>
+        <p className="text-xl font-bold text-dash-text">{value}</p>
         <p className="text-[12px] text-dash-muted mt-0.5">{label}</p>
         {sub && <p className="text-[11px] text-dash-primary font-medium mt-0.5">{sub}</p>}
       </div>
@@ -104,12 +127,12 @@ export default function MentorDashboard() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
 
-  const [roadmaps, setRoadmaps]     = useState([])
-  const [profile, setProfile]       = useState(null)
-  const [loading, setLoading]       = useState(true)
-  const [toggling, setToggling]     = useState(null)
+  const [roadmaps, setRoadmaps] = useState([])
+  const [profile,  setProfile]  = useState(null)
+  const [loading,  setLoading]  = useState(true)
+  const [toggling, setToggling] = useState(null)
 
-  const hour = new Date().getHours()
+  const hour     = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
 
   useEffect(() => {
@@ -117,12 +140,8 @@ export default function MentorDashboard() {
       roadmapService.getMyroadmap(),
       import('../../services/api').then(({ default: api }) => api.get('/mentor-profiles/me')),
     ]).then(([roadmapsRes, profileRes]) => {
-      if (roadmapsRes.status === 'fulfilled') {
-        setRoadmaps(roadmapsRes.value.data ?? [])
-      }
-      if (profileRes.status === 'fulfilled') {
-        setProfile(profileRes.value.data)
-      }
+      if (roadmapsRes.status === 'fulfilled') setRoadmaps(roadmapsRes.value.data ?? [])
+      if (profileRes.status  === 'fulfilled') setProfile(profileRes.value.data)
     }).finally(() => setLoading(false))
   }, [])
 
@@ -137,14 +156,20 @@ export default function MentorDashboard() {
     setToggling(null)
   }
 
-  const totalLearners   = roadmaps.reduce((acc, r) => acc + (r.enrollmentCount ?? 0), 0)
-  const publishedCount  = roadmaps.filter((r) => r.isPublished).length
+  const totalLearners  = roadmaps.reduce((acc, r) => acc + (r.enrollmentCount ?? 0), 0)
+  const publishedCount = roadmaps.filter((r) => r.isPublished).length
+
+  // Earnings derived from mock (platform commission = 20%)
+  const totalEnrollments = totalLearners
+  const totalEarnings    = MOCK_EARNINGS_HISTORY.reduce((s, e) => s + e.amount, 0)
+  const paidEarnings     = MOCK_EARNINGS_HISTORY.filter((e) => e.status === 'paid').reduce((s, e) => s + e.amount, 0)
+  const pendingEarnings  = totalEarnings - paidEarnings
 
   const STATS = [
-    { icon: Map,         label: 'Total Roadmaps',       value: loading ? '–' : roadmaps.length,  color: 'bg-blue-50 text-blue-600'    },
-    { icon: Users,       label: 'Total Learners',        value: loading ? '–' : totalLearners,    color: 'bg-purple-50 text-purple-600' },
-    { icon: CheckSquare, label: 'Published',             value: loading ? '–' : publishedCount,   color: 'bg-green-50 text-green-600'  },
-    { icon: Star,        label: 'Average Rating',        value: profile?.rating ? profile.rating.toFixed(1) : '–', color: 'bg-amber-50 text-amber-600', sub: profile?.totalReviews ? `${profile.totalReviews} reviews` : null },
+    { icon: Map,         label: 'Total Roadmaps',    value: loading ? '–' : roadmaps.length, color: 'bg-blue-50 text-blue-600'    },
+    { icon: Users,       label: 'Total Learners',     value: loading ? '–' : totalLearners,  color: 'bg-purple-50 text-purple-600' },
+    { icon: CheckSquare, label: 'Published',          value: loading ? '–' : publishedCount, color: 'bg-green-50 text-green-600'  },
+    { icon: Star,        label: 'Average Rating',     value: profile?.rating ? profile.rating.toFixed(1) : '–', color: 'bg-amber-50 text-amber-600', sub: profile?.totalReviews ? `${profile.totalReviews} reviews` : null },
   ]
 
   return (
@@ -179,6 +204,64 @@ export default function MentorDashboard() {
         {STATS.map((s) => <StatCard key={s.label} {...s} />)}
       </motion.div>
 
+      {/* ── Earnings & Commission ────────────────────────────── */}
+      <div className="dash-card p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <DollarSign size={16} className="text-dash-primary" />
+          <h3 className="font-semibold text-[15px] text-dash-text">Earnings & Commission</h3>
+          <span className="dash-badge dash-badge-amber text-[11px] ml-auto flex items-center gap-1">
+            <Clock size={10} /> ${pendingEarnings} pending payout
+          </span>
+        </div>
+
+        {/* Earnings stat cards */}
+        <motion.div
+          variants={container} initial="hidden" animate="show"
+          className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5"
+        >
+          {[
+            { icon: DollarSign, label: 'Total Earnings',       value: `$${totalEarnings}`,   color: 'bg-green-50 text-green-600' },
+            { icon: Clock,      label: 'Pending Commission',   value: `$${pendingEarnings}`, color: 'bg-amber-50 text-amber-600', sub: 'Awaiting payout' },
+            { icon: CreditCard, label: 'Paid Out',             value: `$${paidEarnings}`,    color: 'bg-blue-50 text-blue-600'  },
+            { icon: BarChart3,  label: 'Roadmaps Sold',        value: totalEnrollments,       color: 'bg-purple-50 text-purple-600' },
+          ].map((s) => <EarningsStatCard key={s.label} {...s} />)}
+        </motion.div>
+
+        {/* Earnings history table */}
+        <div>
+          <p className="text-[12px] font-semibold text-dash-muted uppercase tracking-wider mb-3">Earnings History</p>
+
+          {/* Header */}
+          <div className="hidden sm:grid grid-cols-[1.5fr_1fr_1fr_1fr] gap-4 px-4 py-2 bg-gray-50 rounded-xl text-[11px] font-semibold text-dash-muted uppercase tracking-wider mb-1">
+            <span>Period</span>
+            <span>Enrollments</span>
+            <span>Amount</span>
+            <span>Status</span>
+          </div>
+
+          {MOCK_EARNINGS_HISTORY.map((e, i) => (
+            <div
+              key={i}
+              className="grid grid-cols-2 sm:grid-cols-[1.5fr_1fr_1fr_1fr] gap-4 items-center px-4 py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors rounded-lg"
+            >
+              <span className="text-[13px] font-medium text-dash-text">{e.month}</span>
+              <span className="text-[13px] text-dash-muted">{e.enrollments} learners</span>
+              <span className="text-[13px] font-semibold text-dash-text">${e.amount}</span>
+              <span className={`dash-badge w-fit text-[11px] ${e.status === 'paid' ? 'dash-badge-green' : 'dash-badge-amber'}`}>
+                {e.status === 'paid' ? 'Paid' : 'Pending'}
+              </span>
+            </div>
+          ))}
+
+          <div className="mt-3 p-3 bg-amber-50 rounded-xl flex items-center justify-between">
+            <p className="text-[12px] text-amber-700">
+              <Clock size={12} className="inline mr-1" />
+              Your pending commission of <strong>${pendingEarnings}</strong> will be paid by the 1st of next month.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* ── My Roadmaps ──────────────────────────────────────── */}
       <div className="dash-card p-5">
         <div className="flex items-center justify-between mb-4">
@@ -205,7 +288,10 @@ export default function MentorDashboard() {
             <BookOpen className="text-gray-300" size={36} />
             <p className="text-dash-text font-medium">No roadmaps yet</p>
             <p className="text-[13px] text-dash-muted">Create your first roadmap to start teaching.</p>
-            <button className="dash-btn-primary text-[13px] px-4 py-2 flex items-center gap-2">
+            <button
+              onClick={() => navigate('/roadmaps')}
+              className="dash-btn-primary text-[13px] px-4 py-2 flex items-center gap-2"
+            >
               <Plus size={14} /> Create Roadmap
             </button>
           </div>
@@ -223,7 +309,7 @@ export default function MentorDashboard() {
         )}
       </div>
 
-      {/* ── Mentor Analytics Teaser ───────────────────────────── */}
+      {/* ── Mentor Analytics ─────────────────────────────────── */}
       <div className="dash-card p-5">
         <div className="flex items-center gap-2 mb-4">
           <TrendingUp size={16} className="text-dash-primary" />
@@ -231,9 +317,9 @@ export default function MentorDashboard() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { label: 'Profile Views',      value: profile?.profileViews ?? '–',   color: 'text-blue-600'  },
-            { label: 'Total Completions',  value: profile?.totalCompletions ?? '–', color: 'text-green-600' },
-            { label: 'Verified Mentor',    value: profile?.isVerified ? 'Yes ✓' : 'Pending', color: profile?.isVerified ? 'text-green-600' : 'text-amber-600' },
+            { label: 'Profile Views',     value: profile?.profileViews ?? '–',    color: 'text-blue-600'  },
+            { label: 'Total Completions', value: profile?.totalCompletions ?? '–', color: 'text-green-600' },
+            { label: 'Verified Mentor',   value: profile?.isVerified ? 'Yes ✓' : 'Pending', color: profile?.isVerified ? 'text-green-600' : 'text-amber-600' },
           ].map(({ label, value, color }) => (
             <div key={label} className="bg-gray-50 rounded-xl p-4 text-center">
               <p className={`text-xl font-bold ${color}`}>{value}</p>

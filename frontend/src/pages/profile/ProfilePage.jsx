@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   User,
   Mail,
@@ -19,8 +19,13 @@ import {
   Edit3,
   Save,
   X,
+  Loader2,
+  ShieldCheck,
+  ShieldOff,
+  QrCode,
 } from 'lucide-react'
 import useAuthStore from '../../store/useAuthStore'
+import api from '../../services/api'
 
 /* ─── Tabs ───────────────────────────────────────────────────── */
 const TABS = [
@@ -173,43 +178,202 @@ function OverviewTab() {
 
 /* ─── Security Tab ─────────────────────────────────────────── */
 function SecurityTab() {
-  const [twoFA, setTwoFA]               = useState(false)
+  const { user, setup2FA, verify2FASetup, setUser } = useAuthStore()
+
+  // 2FA state
+  const [twoFAStep, setTwoFAStep]       = useState('idle')  // idle | qr | verify | enabled
+  const [qrCode, setQrCode]             = useState('')
+  const [twoFAToken, setTwoFAToken]     = useState('')
+  const [twoFALoading, setTwoFALoading] = useState(false)
+  const [twoFAError, setTwoFAError]     = useState('')
+
+  // Password state
   const [showPwForm, setShowPwForm]     = useState(false)
   const [showOld, setShowOld]           = useState(false)
   const [showNew, setShowNew]           = useState(false)
+  const [pwForm, setPwForm]             = useState({ current: '', newPw: '' })
+  const [pwLoading, setPwLoading]       = useState(false)
+  const [pwMsg, setPwMsg]               = useState({ type: '', text: '' })
+
+  const isEnabled = user?.twoFactorEnabled ?? false
+
+  // ── Step 1: Generate QR code ─────────────────────────────────
+  const handleEnable2FA = async () => {
+    setTwoFALoading(true)
+    setTwoFAError('')
+    try {
+      const data = await setup2FA()
+      setQrCode(data.qrCode ?? data.data?.qrCode ?? '')
+      setTwoFAStep('qr')
+    } catch (err) {
+      setTwoFAError(err.response?.data?.message ?? 'Failed to generate QR code.')
+    }
+    setTwoFALoading(false)
+  }
+
+  // ── Step 2: Verify token and enable 2FA ──────────────────────
+  const handleVerify2FA = async () => {
+    if (twoFAToken.length !== 6) { setTwoFAError('Enter 6-digit code.'); return }
+    setTwoFALoading(true)
+    setTwoFAError('')
+    try {
+      await verify2FASetup({ token: twoFAToken })
+      // Update local user state to reflect 2FA enabled
+      setUser({ ...user, twoFactorEnabled: true })
+      setTwoFAStep('idle')
+      setTwoFAToken('')
+      setQrCode('')
+    } catch (err) {
+      setTwoFAError(err.response?.data?.message ?? 'Invalid code. Try again.')
+    }
+    setTwoFALoading(false)
+  }
+
+  // ── Disable 2FA ──────────────────────────────────────────────
+  const handleDisable2FA = async () => {
+    setTwoFALoading(true)
+    setTwoFAError('')
+    try {
+      await api.delete('/user/me/2fa')
+      setUser({ ...user, twoFactorEnabled: false })
+    } catch (err) {
+      setTwoFAError(err.response?.data?.message ?? 'Failed to disable 2FA.')
+    }
+    setTwoFALoading(false)
+  }
+
+  // ── Change Password ──────────────────────────────────────────
+  const handleChangePassword = async (e) => {
+    e.preventDefault()
+    setPwLoading(true)
+    setPwMsg({ type: '', text: '' })
+    try {
+      await api.patch('/user/me/password', { currentPassword: pwForm.current, newPassword: pwForm.newPw })
+      setPwMsg({ type: 'success', text: 'Password updated successfully.' })
+      setPwForm({ current: '', newPw: '' })
+      setShowPwForm(false)
+    } catch (err) {
+      setPwMsg({ type: 'error', text: err.response?.data?.message ?? 'Failed to update password.' })
+    }
+    setPwLoading(false)
+  }
 
   return (
     <div className="space-y-4">
-      {/* 2FA */}
+      {/* ── 2FA Card ───────────────────────────────────────────── */}
       <div className="dash-card p-5">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <Shield size={16} className={isEnabled ? 'text-green-600' : 'text-dash-muted'} />
             <h4 className="font-semibold text-[14px] text-dash-text">Two-Factor Authentication</h4>
-            <p className="text-[12px] text-dash-muted mt-0.5">
-              Add an extra layer of security to your account.
-            </p>
           </div>
-          <button
-            onClick={() => setTwoFA(!twoFA)}
-            className={`relative w-11 h-6 rounded-full transition-colors ${twoFA ? 'bg-dash-primary' : 'bg-gray-200'}`}
-          >
-            <span
-              className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${twoFA ? 'translate-x-5' : 'translate-x-0'}`}
-            />
-          </button>
+          {isEnabled ? (
+            <span className="dash-badge dash-badge-green text-[10px] flex items-center gap-1">
+              <CheckCircle size={10} /> Enabled
+            </span>
+          ) : (
+            <span className="dash-badge dash-badge-gray text-[10px]">Disabled</span>
+          )}
         </div>
-        {twoFA && (
-          <motion.p
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            className="text-[12px] text-green-600 mt-3 flex items-center gap-1.5"
-          >
-            <CheckCircle size={13} /> 2FA is active. Your account is more secure.
-          </motion.p>
+        <p className="text-[12px] text-dash-muted mb-4">
+          {isEnabled
+            ? 'Your account is protected with TOTP-based 2FA.'
+            : 'Add an extra layer of security using an authenticator app.'}
+        </p>
+
+        {twoFAError && (
+          <div className="mb-3 px-3 py-2 rounded-xl bg-red-50 border border-red-100 text-red-700 text-[12px]">
+            {twoFAError}
+          </div>
         )}
+
+        <AnimatePresence mode="wait">
+          {twoFAStep === 'idle' && (
+            <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              {isEnabled ? (
+                <button
+                  onClick={handleDisable2FA}
+                  disabled={twoFALoading}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 text-red-600 text-[13px] font-medium hover:bg-red-50 disabled:opacity-60 transition-colors"
+                >
+                  {twoFALoading ? <Loader2 size={13} className="animate-spin" /> : <ShieldOff size={13} />}
+                  Disable 2FA
+                </button>
+              ) : (
+                <button
+                  onClick={handleEnable2FA}
+                  disabled={twoFALoading}
+                  className="dash-btn-primary flex items-center gap-2 px-4 py-2 text-[13px] disabled:opacity-60"
+                >
+                  {twoFALoading ? <Loader2 size={13} className="animate-spin" /> : <ShieldCheck size={13} />}
+                  Enable 2FA
+                </button>
+              )}
+            </motion.div>
+          )}
+
+          {twoFAStep === 'qr' && (
+            <motion.div
+              key="qr"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="space-y-4"
+            >
+              <div className="flex items-start gap-4">
+                {qrCode ? (
+                  <img src={qrCode} alt="2FA QR Code" className="w-36 h-36 rounded-xl border border-gray-200" />
+                ) : (
+                  <div className="w-36 h-36 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center">
+                    <QrCode size={40} className="text-gray-300" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <p className="text-[13px] text-dash-text font-medium mb-1">Scan this QR code</p>
+                  <p className="text-[12px] text-dash-muted leading-relaxed">
+                    Open your authenticator app (Google Authenticator, Authy, etc.) and scan this QR code.
+                    Then enter the 6-digit code below.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-dash-muted uppercase tracking-wide mb-1.5 block">
+                  Verification Code
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={twoFAToken}
+                    onChange={e => setTwoFAToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    onKeyDown={e => e.key === 'Enter' && handleVerify2FA()}
+                    className="dash-input px-3 py-2 text-[15px] font-mono tracking-widest w-36"
+                  />
+                  <button
+                    onClick={handleVerify2FA}
+                    disabled={twoFALoading || twoFAToken.length !== 6}
+                    className="dash-btn-primary flex items-center gap-2 px-4 py-2 text-[13px] disabled:opacity-60"
+                  >
+                    {twoFALoading ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />}
+                    Verify & Enable
+                  </button>
+                  <button
+                    onClick={() => { setTwoFAStep('idle'); setQrCode(''); setTwoFAToken(''); setTwoFAError('') }}
+                    className="dash-btn-outline px-3 py-2 text-[13px]"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Password */}
+      {/* ── Change Password ────────────────────────────────────── */}
       <div className="dash-card p-5">
         <div className="flex items-center justify-between">
           <div>
@@ -219,49 +383,69 @@ function SecurityTab() {
             </p>
           </div>
           <button
-            onClick={() => setShowPwForm(!showPwForm)}
+            onClick={() => { setShowPwForm(!showPwForm); setPwMsg({ type: '', text: '' }) }}
             className="dash-btn-outline text-[12px] px-3 py-1.5"
           >
             {showPwForm ? 'Cancel' : 'Change'}
           </button>
         </div>
 
-        {showPwForm && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-4 space-y-3"
-          >
-            {[
-              { label: 'Current Password', show: showOld, toggle: () => setShowOld(!showOld) },
-              { label: 'New Password',     show: showNew, toggle: () => setShowNew(!showNew) },
-            ].map(({ label, show, toggle }) => (
-              <div key={label}>
-                <label className="text-[11px] font-semibold text-dash-muted uppercase tracking-wide mb-1 block">
-                  {label}
-                </label>
-                <div className="relative">
-                  <input
-                    type={show ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    className="dash-input w-full px-3 py-2 text-[13px] pr-9"
-                  />
-                  <button
-                    type="button"
-                    onClick={toggle}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-dash-muted hover:text-dash-text"
-                  >
-                    {show ? <EyeOff size={14} /> : <Eye size={14} />}
-                  </button>
-                </div>
-              </div>
-            ))}
-            <button className="dash-btn-primary text-[13px] px-4 py-2">Update Password</button>
-          </motion.div>
+        {pwMsg.text && (
+          <div className={`mt-3 px-3 py-2 rounded-xl text-[12px] ${pwMsg.type === 'success' ? 'bg-green-50 border border-green-100 text-green-700' : 'bg-red-50 border border-red-100 text-red-700'}`}>
+            {pwMsg.text}
+          </div>
         )}
+
+        <AnimatePresence>
+          {showPwForm && (
+            <motion.form
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              onSubmit={handleChangePassword}
+              className="mt-4 space-y-3"
+            >
+              {[
+                { label: 'Current Password', field: 'current', show: showOld, toggle: () => setShowOld(!showOld) },
+                { label: 'New Password',     field: 'newPw',   show: showNew, toggle: () => setShowNew(!showNew) },
+              ].map(({ label, field, show, toggle }) => (
+                <div key={field}>
+                  <label className="text-[11px] font-semibold text-dash-muted uppercase tracking-wide mb-1 block">
+                    {label}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={show ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={pwForm[field]}
+                      onChange={e => setPwForm(p => ({ ...p, [field]: e.target.value }))}
+                      required
+                      className="dash-input w-full px-3 py-2 text-[13px] pr-9"
+                    />
+                    <button
+                      type="button"
+                      onClick={toggle}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-dash-muted hover:text-dash-text"
+                    >
+                      {show ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <button
+                type="submit"
+                disabled={pwLoading}
+                className="dash-btn-primary text-[13px] px-4 py-2 flex items-center gap-2 disabled:opacity-60"
+              >
+                {pwLoading && <Loader2 size={13} className="animate-spin" />}
+                Update Password
+              </button>
+            </motion.form>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Active sessions */}
+      {/* Active sessions (static) */}
       <div className="dash-card p-5">
         <h4 className="font-semibold text-[14px] text-dash-text mb-3">Active Sessions</h4>
         <div className="space-y-3">
