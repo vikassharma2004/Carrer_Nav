@@ -33,7 +33,17 @@ export default function SignInPage() {
         navigate('/mentor/apply')
         return
       }
-      navigate(from, { replace: true })
+      // Role-based redirect
+      const role = res.user?.role
+      if (from && from !== '/') {
+        navigate(from, { replace: true })
+      } else if (role === 'mentor') {
+        navigate('/dashboard/mentor', { replace: true })
+      } else if (role === 'admin') {
+        navigate('/dashboard/admin', { replace: true })
+      } else {
+        navigate('/dashboard/learner', { replace: true })
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Sign in failed. Please try again.')
     }

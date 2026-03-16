@@ -6,15 +6,21 @@ import LandingPage          from './pages/LandingPage'
 import SignInPage           from './pages/auth/SignInPage'
 import SignUpPage           from './pages/auth/SignUpPage'
 import VerifyEmailPage      from './pages/auth/VerifyEmailPage'
+import VerifyMFAPage        from './pages/auth/VerifyMFAPage'
 
 /* ── Mentor onboarding ──────────────────────────────────────── */
 import MentorOnboardingPage from './pages/mentor/MentorOnboardingPage'
 import MentorSuccessPage    from './pages/mentor/MentorSuccessPage'
 
-/* ── Dashboard pages ────────────────────────────────────────── */
+/* ── Role dashboards ────────────────────────────────────────── */
 import DashboardLayout      from './components/layout/DashboardLayout'
-import DashboardPage        from './pages/dashboard/DashboardPage'
+import LearnerDashboard     from './pages/dashboard/LearnerDashboard'
+import MentorDashboard      from './pages/dashboard/MentorDashboard'
+import AdminDashboard       from './pages/dashboard/AdminDashboard'
+
+/* ── Other app pages ────────────────────────────────────────── */
 import RoadmapsPage         from './pages/roadmaps/RoadmapsPage'
+import RoadmapDetailPage    from './pages/roadmaps/RoadmapDetailPage'
 import CommunityPage        from './pages/community/CommunityPage'
 import ProfilePage          from './pages/profile/ProfilePage'
 import AIAssistantPage      from './pages/ai/AIAssistantPage'
@@ -24,6 +30,14 @@ import RequireAuth          from './components/shared/RequireAuth'
 import RequireGuest         from './components/shared/RequireGuest'
 import ScrollToTop          from './components/shared/ScrollToTop'
 import useAuthStore         from './store/useAuthStore'
+
+/** Smart redirect: sends each role to their own dashboard */
+function RoleRedirect() {
+  const { user } = useAuthStore()
+  if (user?.role === 'mentor') return <Navigate to="/dashboard/mentor" replace />
+  if (user?.role === 'admin')  return <Navigate to="/dashboard/admin"  replace />
+  return <Navigate to="/dashboard/learner" replace />
+}
 
 export default function App() {
   const { logout, isAuthenticated } = useAuthStore()
@@ -42,11 +56,7 @@ export default function App() {
         {/* ── Public ──────────────────────────────────── */}
         <Route
           path="/"
-          element={
-            isAuthenticated
-              ? <Navigate to="/dashboard" replace />
-              : <LandingPage />
-          }
+          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />}
         />
 
         {/* ── Guest-only ──────────────────────────────── */}
@@ -54,6 +64,7 @@ export default function App() {
           <Route path="/auth/signin"       element={<SignInPage />} />
           <Route path="/auth/signup"       element={<SignUpPage />} />
           <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/auth/2fa"          element={<VerifyMFAPage />} />
         </Route>
 
         {/* ── Authenticated ───────────────────────────── */}
@@ -63,19 +74,27 @@ export default function App() {
           <Route path="/mentor/apply"         element={<MentorOnboardingPage />} />
           <Route path="/mentor/apply/success" element={<MentorSuccessPage />} />
 
+          {/* /dashboard → smart role redirect */}
+          <Route path="/dashboard" element={<RoleRedirect />} />
+
           {/* Dashboard shell wraps all app pages */}
           <Route element={<DashboardLayout />}>
-            <Route path="/dashboard"  element={<DashboardPage />} />
-            <Route path="/roadmaps"   element={<RoadmapsPage />} />
-            <Route path="/community"  element={<CommunityPage />} />
-            <Route path="/ai"         element={<AIAssistantPage />} />
-            <Route path="/profile"    element={<ProfilePage />} />
-            {/* Placeholder routes (add pages as they're built) */}
+            {/* Role-specific dashboards */}
+            <Route path="/dashboard/learner" element={<LearnerDashboard />} />
+            <Route path="/dashboard/mentor"  element={<MentorDashboard />} />
+            <Route path="/dashboard/admin"   element={<AdminDashboard />} />
+
+            {/* Shared pages */}
+            <Route path="/roadmaps"          element={<RoadmapsPage />} />
+            <Route path="/roadmaps/:roadmapId" element={<RoadmapDetailPage />} />
+            <Route path="/community"         element={<CommunityPage />} />
+            <Route path="/ai"                element={<AIAssistantPage />} />
+            <Route path="/profile"           element={<ProfilePage />} />
+
+            {/* Placeholder routes */}
             <Route path="/tasks"      element={<ComingSoon title="My Tasks" />} />
             <Route path="/bookmarks"  element={<ComingSoon title="Bookmarks" />} />
             <Route path="/settings"   element={<ComingSoon title="Settings" />} />
-            {/* Mentor dashboard */}
-            <Route path="/mentor/dashboard" element={<DashboardPage />} />
           </Route>
         </Route>
 

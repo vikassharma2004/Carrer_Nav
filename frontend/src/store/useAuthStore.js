@@ -62,6 +62,30 @@ const useAuthStore = create(
         set({ user: null, isAuthenticated: false })
       },
 
+      // ── Complete login with 2FA code ──────────────────────────────────────
+      verify2FALogin: async ({ userId, token }) => {
+        set({ isLoading: true })
+        try {
+          const res = await api.post('/auth/login/2fa', { userId, token })
+          set({ user: res.data.user, isAuthenticated: true })
+          return res.data
+        } finally {
+          set({ isLoading: false })
+        }
+      },
+
+      // ── Generate 2FA secret + QR code (setup) ────────────────────────────
+      setup2FA: async () => {
+        const res = await api.post('/auth/2fa/generate')
+        return res.data   // { qrCode, secret }
+      },
+
+      // ── Verify 2FA code during setup (enables 2FA) ────────────────────────
+      verify2FASetup: async ({ token }) => {
+        const res = await api.post('/auth/2fa/verify', { token })
+        return res.data
+      },
+
       // ── Fetch current user (hydrate on app mount) ─────────────────────────
       fetchMe: async () => {
         try {

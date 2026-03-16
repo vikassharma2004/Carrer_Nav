@@ -1,19 +1,27 @@
 import api from './api'
 
-const roadmapervice = {
+const roadmapService = {
   /** GET /roadmap — published list with filters */
   getPublished: (params = {}) =>
     api.get('/roadmap', { params }).then((r) => r.data),
 
-
+  /** GET /roadmap/:id */
   getById: (id) => api.get(`/roadmap/${id}`).then((r) => r.data),
 
-  /** GET /roadmap/me — mentor's own roadmap */
+  /** GET /roadmap/me — mentor's own roadmaps */
   getMyroadmap: () => api.get('/roadmap/me').then((r) => r.data),
 
   /** GET /roadmap/:roadmapId/modules */
   getModules: (roadmapId) =>
     api.get(`/roadmap/${roadmapId}/modules`).then((r) => r.data),
+
+  /** GET /modules/:moduleId/tasks */
+  getTasks: (moduleId) =>
+    api.get(`/modules/${moduleId}/tasks`).then((r) => r.data),
+
+  /** GET /roadmap/:roadmapId/projects */
+  getProjects: (roadmapId) =>
+    api.get(`/roadmap/${roadmapId}/projects`).then((r) => r.data),
 
   /** POST /roadmap */
   create: (data) => api.post('/roadmap', data).then((r) => r.data),
@@ -29,4 +37,4 @@ const roadmapervice = {
   remove: (id) => api.delete(`/roadmap/${id}`).then((r) => r.data),
 }
 
-export default roadmapervice
+export default roadmapService
