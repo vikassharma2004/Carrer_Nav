@@ -5,7 +5,7 @@ const roadmapervice = {
   getPublished: (params = {}) =>
     api.get('/roadmap', { params }).then((r) => r.data),
 
-  /** GET /roadmap/:id */
+
   getById: (id) => api.get(`/roadmap/${id}`).then((r) => r.data),
 
   /** GET /roadmap/me — mentor's own roadmap */
