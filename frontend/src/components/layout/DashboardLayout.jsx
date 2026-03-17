@@ -34,7 +34,7 @@ export default function DashboardLayout() {
         onMobileClose={() => setMobileOpen(false)}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
         <TopNavbar onMobileMenuToggle={() => setMobileOpen((o) => !o)} />
 
         <AnimatePresence mode="wait">
@@ -45,7 +45,7 @@ export default function DashboardLayout() {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.22, ease: 'easeOut' }}
-            className="flex-1 overflow-y-auto p-5 lg:p-6"
+            className="flex-1 min-h-0 overflow-y-auto p-5 lg:p-6"
           >
             <Outlet />
           </motion.main>

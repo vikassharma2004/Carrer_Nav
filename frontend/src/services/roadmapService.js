@@ -33,6 +33,14 @@ const roadmapService = {
   togglePublish: (id) =>
     api.patch(`/roadmap/${id}/publish`).then((r) => r.data),
 
+  /** GET /tasks/:taskId/resources */
+  getTaskResources: (taskId) =>
+    api.get(`/tasks/${taskId}/resources`).then((r) => r.data),
+
+  /** GET /projects/:projectId/resources */
+  getProjectResources: (projectId) =>
+    api.get(`/projects/${projectId}/resources`).then((r) => r.data),
+
   /** DELETE /roadmap/:id */
   remove: (id) => api.delete(`/roadmap/${id}`).then((r) => r.data),
 }

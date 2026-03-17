@@ -1,5 +1,10 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
+})
 
 /* ── Landing / Auth ─────────────────────────────────────────── */
 import LandingPage          from './pages/LandingPage'
@@ -23,9 +28,17 @@ import UsersManagementPage     from './pages/admin/UsersManagementPage'
 import OnboardingRequestsPage  from './pages/admin/OnboardingRequestsPage'
 import BillingPlansPage        from './pages/admin/BillingPlansPage'
 
-/* ── Other app pages ────────────────────────────────────────── */
+/* ── Roadmap pages ──────────────────────────────────────────── */
 import RoadmapsPage         from './pages/roadmaps/RoadmapsPage'
 import RoadmapDetailPage    from './pages/roadmaps/RoadmapDetailPage'
+import CreateRoadmapPage    from './pages/roadmaps/CreateRoadmapPage'
+import EditRoadmapPage      from './pages/roadmaps/EditRoadmapPage'
+
+/* ── Analytics pages ────────────────────────────────────────── */
+import LearnerAnalyticsPage from './pages/analytics/LearnerAnalyticsPage'
+import MentorAnalyticsPage  from './pages/analytics/MentorAnalyticsPage'
+
+/* ── Other app pages ────────────────────────────────────────── */
 import CommunityPage        from './pages/community/CommunityPage'
 import ProfilePage          from './pages/profile/ProfilePage'
 import AIAssistantPage      from './pages/ai/AIAssistantPage'
@@ -45,6 +58,13 @@ function RoleRedirect() {
   return <Navigate to="/dashboard/learner" replace />
 }
 
+/** Analytics redirect: routes to role-specific analytics page */
+function AnalyticsRedirect() {
+  const { user } = useAuthStore()
+  if (user?.role === 'mentor') return <Navigate to="/analytics/mentor" replace />
+  return <Navigate to="/analytics/learner" replace />
+}
+
 export default function App() {
   const { logout, isAuthenticated } = useAuthStore()
 
@@ -55,6 +75,7 @@ export default function App() {
   }, [logout])
 
   return (
+    <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <ScrollToTop />
       <Routes>
@@ -91,28 +112,36 @@ export default function App() {
             <Route path="/dashboard/admin"   element={<AdminDashboard />} />
 
             {/* Admin sub-pages */}
-            <Route path="/dashboard/admin/users"      element={<UsersManagementPage />} />
-            <Route path="/dashboard/admin/onboarding" element={<OnboardingRequestsPage />} />
-            <Route path="/dashboard/admin/billing"    element={<BillingPlansPage />} />
+            <Route path="/dashboard/admin/users"       element={<UsersManagementPage />} />
+            <Route path="/dashboard/admin/onboarding"  element={<OnboardingRequestsPage />} />
+            <Route path="/dashboard/admin/billing"     element={<BillingPlansPage />} />
+
+            {/* Roadmap pages */}
+            <Route path="/roadmaps"                        element={<RoadmapsPage />} />
+            <Route path="/roadmaps/create"                 element={<CreateRoadmapPage />} />
+            <Route path="/roadmaps/:roadmapId"             element={<RoadmapDetailPage />} />
+            <Route path="/roadmaps/:roadmapId/edit"        element={<EditRoadmapPage />} />
+
+            {/* Analytics pages */}
+            <Route path="/analytics"         element={<AnalyticsRedirect />} />
+            <Route path="/analytics/learner" element={<LearnerAnalyticsPage />} />
+            <Route path="/analytics/mentor"  element={<MentorAnalyticsPage />} />
 
             {/* Shared pages */}
-            <Route path="/roadmaps"            element={<RoadmapsPage />} />
-            <Route path="/roadmaps/:roadmapId" element={<RoadmapDetailPage />} />
-            <Route path="/community"                   element={<CommunityPage />} />
-            <Route path="/community/:communityId"      element={<CommunityPage />} />
-            <Route path="/ai"                  element={<AIAssistantPage />} />
-            <Route path="/profile"             element={<ProfilePage />} />
-
-            {/* Task page */}
-            <Route path="/tasks"     element={<TasksPage />} />
-            <Route path="/bookmarks" element={<ComingSoon title="Bookmarks" />} />
-            <Route path="/settings"  element={<ComingSoon title="Settings" />} />
+            <Route path="/community"              element={<CommunityPage />} />
+            <Route path="/community/:communityId" element={<CommunityPage />} />
+            <Route path="/ai"                     element={<AIAssistantPage />} />
+            <Route path="/profile"                element={<ProfilePage />} />
+            <Route path="/tasks"                  element={<TasksPage />} />
+            <Route path="/bookmarks"              element={<ComingSoon title="Bookmarks" />} />
+            <Route path="/settings"               element={<ComingSoon title="Settings" />} />
           </Route>
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
+    </QueryClientProvider>
   )
 }
 

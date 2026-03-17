@@ -3,26 +3,28 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Map, Users, CheckSquare, Bot, Bookmark,
   UserCircle, Settings, LogOut, GraduationCap, ChevronRight,
-  ChevronLeft, UserCheck, CreditCard, X,
+  ChevronLeft, UserCheck, CreditCard, X, BarChart2,
 } from 'lucide-react'
 import useAuthStore from '../../store/useAuthStore'
 
 /* ── Role-aware nav definitions ──────────────────────────────── */
 const LEARNER_NAV = [
-  { to: '/dashboard/learner', icon: LayoutDashboard, label: 'Dashboard', end: true },
-  { to: '/roadmaps',          icon: Map,             label: 'Roadmaps' },
-  { to: '/community',         icon: Users,           label: 'Community' },
-  { to: '/tasks',             icon: CheckSquare,     label: 'My Tasks' },
-  { to: '/ai',                icon: Bot,             label: 'AI Assistant' },
-  { to: '/bookmarks',         icon: Bookmark,        label: 'Bookmarks' },
+  { to: '/dashboard/learner', icon: LayoutDashboard, label: 'Dashboard',  end: true },
+  { to: '/roadmaps',          icon: Map,             label: 'Roadmaps'              },
+  { to: '/community',         icon: Users,           label: 'Community'             },
+  { to: '/tasks',             icon: CheckSquare,     label: 'My Tasks'              },
+  { to: '/ai',                icon: Bot,             label: 'AI Assistant'          },
+  { to: '/analytics',         icon: BarChart2,       label: 'Analytics'             },
+  { to: '/bookmarks',         icon: Bookmark,        label: 'Bookmarks'             },
 ]
 
 const MENTOR_NAV = [
-  { to: '/dashboard/mentor', icon: LayoutDashboard, label: 'Dashboard', end: true },
-  { to: '/roadmaps',         icon: Map,             label: 'Roadmaps' },
-  { to: '/community',        icon: Users,           label: 'Community' },
-  { to: '/tasks',            icon: CheckSquare,     label: 'My Tasks' },
-  { to: '/ai',               icon: Bot,             label: 'AI Assistant' },
+  { to: '/dashboard/mentor', icon: LayoutDashboard, label: 'Dashboard',  end: true },
+  { to: '/roadmaps',         icon: Map,             label: 'Roadmaps'              },
+  { to: '/community',        icon: Users,           label: 'Community'             },
+  { to: '/tasks',            icon: CheckSquare,     label: 'My Tasks'              },
+  { to: '/ai',               icon: Bot,             label: 'AI Assistant'          },
+  { to: '/analytics',        icon: BarChart2,       label: 'Analytics'             },
 ]
 
 const ADMIN_NAV = [

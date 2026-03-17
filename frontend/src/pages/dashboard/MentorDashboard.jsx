@@ -189,7 +189,7 @@ export default function MentorDashboard() {
           </p>
         </div>
         <button
-          onClick={() => navigate('/roadmaps')}
+          onClick={() => navigate('/roadmaps/create')}
           className="dash-btn-primary flex items-center gap-2 px-4 py-2 text-[13px] self-start sm:self-auto"
         >
           <Plus size={14} /> Create Roadmap
@@ -289,7 +289,7 @@ export default function MentorDashboard() {
             <p className="text-dash-text font-medium">No roadmaps yet</p>
             <p className="text-[13px] text-dash-muted">Create your first roadmap to start teaching.</p>
             <button
-              onClick={() => navigate('/roadmaps')}
+              onClick={() => navigate('/roadmaps/create')}
               className="dash-btn-primary text-[13px] px-4 py-2 flex items-center gap-2"
             >
               <Plus size={14} /> Create Roadmap

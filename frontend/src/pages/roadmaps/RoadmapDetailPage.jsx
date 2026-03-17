@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, Star, Users, BookOpen, ChevronDown, ChevronUp,
   CheckSquare, Square, ExternalLink, Folder, Link as LinkIcon,
-  Loader2, AlertCircle, UserCircle, BadgeCheck,
+  Loader2, AlertCircle, UserCircle, BadgeCheck, Edit2,
 } from 'lucide-react'
 import roadmapService from '../../services/roadmapService'
 import enrollmentService from '../../services/enrollmentService'
@@ -206,6 +206,7 @@ export default function RoadmapDetailPage() {
   const [error, setError]               = useState(null)
 
   const isLearner = user?.role === 'learner'
+  const isMentor  = user?.role === 'mentor'
 
   useEffect(() => {
     setLoading(true)
@@ -406,6 +407,16 @@ export default function RoadmapDetailPage() {
 
             {/* Enroll button + overall progress */}
             <div className="flex flex-col gap-3 min-w-[200px]">
+              {/* Mentor edit button for unpublished roadmaps */}
+              {isMentor && !roadmap.isPublished && (
+                <button
+                  onClick={() => navigate(`/roadmaps/${roadmapId}/edit`)}
+                  className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-[14px] dash-btn-primary"
+                >
+                  <Edit2 size={15} /> Edit Roadmap
+                </button>
+              )}
+
               {isLearner && (
                 <button
                   onClick={handleEnroll}
@@ -457,8 +468,7 @@ export default function RoadmapDetailPage() {
             <BookOpen size={16} className="text-dash-primary" />
             Curriculum ({modules.length} modules)
           </h2>
-          {/* Scrollable modules panel — max-h ensures it never exceeds viewport height */}
-          <div className="space-y-3 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
+          <div className="space-y-3">
             {modules.map((mod, i) => (
               <ModuleAccordion
                 key={mod._id}
