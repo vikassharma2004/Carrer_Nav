@@ -674,7 +674,7 @@ export default function CommunityPage() {
   useEffect(() => {
     if (!showSettings || !selected) return
     setLoadingMembers(true)
-    communityService.getMembers(selected._id)
+    communityService.getMembers(urlCommunityId)
       .then(res => setMembers(res.members ?? res.data ?? []))
       .catch(() => setMembers([]))
       .finally(() => setLoadingMembers(false))
@@ -682,12 +682,14 @@ export default function CommunityPage() {
 
   // ── Core: load a community's messages (page 1) ────────────────
   const loadCommunity = useCallback(async (community) => {
+    console.log("community at load community ",community)
     if (currentCommunityRef.current) {
       leaveCommunity(currentCommunityRef.current)
     }
+    console.log("current ref",currentCommunityRef)
 
     setSelected(community)
-    currentCommunityRef.current = community._id
+    currentCommunityRef.current = community.communityId
     setMessages([])
     setCurrentPage(1)
     setHasMore(false)
@@ -697,10 +699,10 @@ export default function CommunityPage() {
     setSelectedFiles([])
     setShowEmojiPicker(false)
 
-    joinCommunity(community._id)
+    joinCommunity(community.communityId)
 
     try {
-      const res  = await communityService.getMessages(community._id, { page: 1, limit: PAGE_LIMIT })
+      const res  = await communityService.getMessages(community.communityId, { page: 1, limit: PAGE_LIMIT })
       const msgs = res.messages ?? res.data ?? []
       setMessages(msgs)
       // If the API returned a pagination object, check if there are more pages
@@ -720,10 +722,12 @@ export default function CommunityPage() {
 
   // ── Select community → update URL + load ──────────────────────
   const selectCommunity = useCallback((community) => {
-    navigate(`/community/${community._id}`)
+    
+   
+    navigate(`/community/${community.communityId}`)
     // loadCommunity is triggered by the urlCommunityId effect,
     // but call directly if already on the same route (re-select)
-    if (urlCommunityId === community._id) {
+    if (urlCommunityId === community.communityId) {
       loadCommunity(community)
     }
   }, [navigate, urlCommunityId, loadCommunity])
@@ -734,7 +738,7 @@ export default function CommunityPage() {
     setLoadingMore(true)
     const nextPage = currentPage + 1
     try {
-      const res  = await communityService.getMessages(selected._id, { page: nextPage, limit: PAGE_LIMIT })
+      const res  = await communityService.getMessages(urlCommunityId, { page: nextPage, limit: PAGE_LIMIT })
       const msgs = res.messages ?? res.data ?? []
       if (msgs.length > 0) {
         setMessages(prev => [...msgs, ...prev])
@@ -772,14 +776,16 @@ export default function CommunityPage() {
 
     try {
       if (editingMsg) {
-        await communityService.editMessage(selected._id, editingMsg._id, content)
+        console.log(selected)
+        await communityService.editMessage(urlCommunityId, editingMsg._id, content)
         setMessages(prev => prev.map(m => m._id === editingMsg._id ? { ...m, content, isEdited: true } : m))
         setEditingMsg(null)
       } else {
         // Optimistic message
+        
         const optimistic = {
           _id:         `opt-${Date.now()}`,
-          communityId: selected._id,
+          communityId: urlCommunityId,
           senderId:    { _id: user?._id, name: user?.name },
           content,
           createdAt:   new Date().toISOString(),
@@ -792,13 +798,14 @@ export default function CommunityPage() {
           const form = new FormData()
           form.append('content', content)
           filesToSend.forEach(f => form.append('files', f))
-          sent = await communityService.sendMessage(selected._id, form)
+          console.log("sending message",selected)
+          sent = await communityService.sendMessage(urlCommunityId, form)
         } else {
-          sent = await communityService.sendMessage(selected._id, { content })
+          sent = await communityService.sendMessage(urlCommunityId, { content })
         }
 
         setMessages(prev => prev.map(m => m._id === optimistic._id ? (sent.message ?? optimistic) : m))
-        setCommunities(prev => prev.map(c => c._id === selected._id ? { ...c, _lastMessage: sent.message ?? optimistic } : c))
+        setCommunities(prev => prev.map(c => c._id === urlCommunityId ? { ...c, _lastMessage: sent.message ?? optimistic } : c))
       }
     } catch (_) {
       if (editingMsg) setNewMsg(content)
@@ -811,9 +818,9 @@ export default function CommunityPage() {
   const handleInputChange = (e) => {
     setNewMsg(e.target.value)
     if (!selected) return
-    emitTyping(selected._id, true)
+    emitTyping(urlCommunityId, true)
     clearTimeout(typingTimeout.current)
-    typingTimeout.current = setTimeout(() => emitTyping(selected._id, false), 2000)
+    typingTimeout.current = setTimeout(() => emitTyping(urlCommunityId, false), 2000)
   }
 
   // ── Insert emoji into input ───────────────────────────────────
@@ -838,13 +845,13 @@ export default function CommunityPage() {
     if (!selected) return
     try {
       if (isMine) {
-        await communityService.removeReaction(selected._id, messageId, emoji)
+        await communityService.removeReaction(urlCommunityId, messageId, emoji)
         setMessages(prev => prev.map(m => m._id === messageId
           ? { ...m, reactions: (m.reactions ?? []).filter(r => !(r.emoji === emoji && (r.userId === user?._id || r.userId?._id === user?._id))) }
           : m
         ))
       } else {
-        await communityService.addReaction(selected._id, messageId, emoji)
+        await communityService.addReaction(urlCommunityId, messageId, emoji)
         setMessages(prev => prev.map(m => m._id === messageId
           ? { ...m, reactions: [...(m.reactions ?? []), { emoji, userId: user?._id }] }
           : m
@@ -858,9 +865,9 @@ export default function CommunityPage() {
     if (!selected) return
     try {
       if (isPinned) {
-        await communityService.unpinMessage(selected._id, messageId)
+        await communityService.unpinMessage(urlCommunityId, messageId)
       } else {
-        await communityService.pinMessage(selected._id, messageId)
+        await communityService.pinMessage(urlCommunityId, messageId)
       }
       setMessages(prev => prev.map(m => m._id === messageId ? { ...m, isPinned: !isPinned } : m))
     } catch (_) {}
@@ -870,7 +877,7 @@ export default function CommunityPage() {
   const handleDelete = async (messageId) => {
     if (!selected) return
     try {
-      await communityService.deleteMessage(selected._id, messageId)
+      await communityService.deleteMessage(urlCommunityId, messageId)
       setMessages(prev => prev.map(m => m._id === messageId ? { ...m, isDeleted: true } : m))
     } catch (_) {}
   }
@@ -880,10 +887,10 @@ export default function CommunityPage() {
     if (!selected) return
     try {
       if (isMuted) {
-        await communityService.unmuteSelf(selected._id)
+        await communityService.unmuteSelf(urlCommunityId)
         setIsMuted(false)
       } else {
-        await communityService.muteSelf(selected._id)
+        await communityService.muteSelf(urlCommunityId)
         setIsMuted(true)
       }
     } catch (_) {}
@@ -893,8 +900,8 @@ export default function CommunityPage() {
   const handleLeave = async () => {
     if (!selected) return
     try {
-      await communityService.leave(selected._id)
-      setCommunities(prev => prev.filter(c => c._id !== selected._id))
+      await communityService.leave(urlCommunityId)
+      setCommunities(prev => prev.filter(c => c._id !== urlCommunityId))
       setSelected(null)
       currentCommunityRef.current = null
       setShowSettings(false)
@@ -916,7 +923,7 @@ export default function CommunityPage() {
 
   const myMembership = members.find(m => m.userId?._id === user?._id || m.userId === user?._id)
   const myRole       = myMembership?.role ?? 'learner'
-  const canModerate  = myRole === 'mentor' || myRole === 'moderator'
+  const canModerate  = myRole === 'mentor'
 
   const filteredCommunities = useMemo(
     () => communities.filter(c => (c.name ?? '').toLowerCase().includes(sidebarSearch.toLowerCase())),

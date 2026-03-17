@@ -67,6 +67,7 @@ const useAuthStore = create(
         set({ isLoading: true })
         try {
           const res = await api.post('/auth/login/2fa', { userId, token })
+          console.log('res', res)
           set({ user: res.data.user, isAuthenticated: true })
           return res.data
         } finally {
