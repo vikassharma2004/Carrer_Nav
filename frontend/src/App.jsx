@@ -33,6 +33,7 @@ import RoadmapsPage         from './pages/roadmaps/RoadmapsPage'
 import RoadmapDetailPage    from './pages/roadmaps/RoadmapDetailPage'
 import CreateRoadmapPage    from './pages/roadmaps/CreateRoadmapPage'
 import EditRoadmapPage      from './pages/roadmaps/EditRoadmapPage'
+import LearningPage         from './pages/roadmaps/LearningPage'
 
 /* ── Analytics pages ────────────────────────────────────────── */
 import LearnerAnalyticsPage from './pages/analytics/LearnerAnalyticsPage'
@@ -121,6 +122,7 @@ export default function App() {
             <Route path="/roadmaps/create"                 element={<CreateRoadmapPage />} />
             <Route path="/roadmaps/:roadmapId"             element={<RoadmapDetailPage />} />
             <Route path="/roadmaps/:roadmapId/edit"        element={<EditRoadmapPage />} />
+            <Route path="/learn/:roadmapId"                element={<LearningPage />} />
 
             {/* Analytics pages */}
             <Route path="/analytics"         element={<AnalyticsRedirect />} />

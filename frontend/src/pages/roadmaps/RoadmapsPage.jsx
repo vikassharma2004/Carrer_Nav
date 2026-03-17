@@ -1,13 +1,15 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Search, ChevronDown, ChevronUp, Star, Users, BookOpen,
   SlidersHorizontal, X, Filter, Plus, Edit2, ToggleLeft,
-  ToggleRight, Loader2,
+  ToggleRight, Loader2, PlayCircle, BookMarked,
 } from 'lucide-react'
-import roadmapService from '../../services/roadmapService'
-import useAuthStore    from '../../store/useAuthStore'
+import roadmapService    from '../../services/roadmapService'
+import enrollmentService from '../../services/enrollmentService'
+import useAuthStore      from '../../store/useAuthStore'
 
 /* ─── Filter options ─────────────────────────────────────────── */
 const DOMAINS = [
@@ -89,8 +91,12 @@ const cardVariants = {
   show:   { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } },
 }
 
-function LearnerCard({ _id, title, shortDescription, coverImage, level, domain, isPaid, price }) {
+const LearnerCard = memo(function LearnerCard({
+  _id, title, shortDescription, coverImage, level, domain, isPaid, price,
+  enrolled, onFollow, following,
+}) {
   const navigate = useNavigate()
+
   return (
     <motion.div
       variants={cardVariants}
@@ -110,6 +116,11 @@ function LearnerCard({ _id, title, shortDescription, coverImage, level, domain, 
         <span className={`absolute top-2 right-2 dash-badge ${isPaid ? 'dash-badge-amber' : 'dash-badge-green'}`}>
           {isPaid ? `₹${price ?? 'Paid'}` : 'Free'}
         </span>
+        {enrolled && (
+          <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-green-500/90 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
+            <BookMarked size={9} /> Enrolled
+          </div>
+        )}
       </div>
 
       <div className="p-4 flex flex-col flex-1">
@@ -132,22 +143,52 @@ function LearnerCard({ _id, title, shortDescription, coverImage, level, domain, 
             <Users size={12} /> 1.2k
           </span>
         </div>
+
         <div className="flex gap-2 mt-3">
-          <button className="flex-1 dash-btn-outline text-[12px] py-1.5">Follow</button>
-          <button
-            className="flex-1 dash-btn-primary text-[12px] py-1.5"
-            onClick={() => navigate(`/roadmaps/${_id}`)}
-          >
-            View Roadmap
-          </button>
+          {enrolled ? (
+            <>
+              <button
+                onClick={() => navigate(`/roadmaps/${_id}`)}
+                className="flex-1 dash-btn-outline text-[12px] py-1.5"
+              >
+                Details
+              </button>
+              <button
+                onClick={() => navigate(`/learn/${_id}`)}
+                className="flex-1 dash-btn-primary text-[12px] py-1.5 flex items-center justify-center gap-1"
+              >
+                <PlayCircle size={12} /> Continue
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => navigate(`/roadmaps/${_id}`)}
+                className="flex-1 dash-btn-outline text-[12px] py-1.5"
+              >
+                View
+              </button>
+              <button
+                onClick={() => onFollow(_id)}
+                disabled={following === _id}
+                className="flex-1 dash-btn-primary text-[12px] py-1.5 flex items-center justify-center gap-1 disabled:opacity-60"
+              >
+                {following === _id
+                  ? <Loader2 size={11} className="animate-spin" />
+                  : <BookMarked size={11} />
+                }
+                Follow
+              </button>
+            </>
+          )}
         </div>
       </div>
     </motion.div>
   )
-}
+})
 
 /* ─── Mentor roadmap card ─────────────────────────────────────── */
-function MentorCard({ roadmap, onTogglePublish, toggling }) {
+const MentorCard = memo(function MentorCard({ roadmap, onTogglePublish, toggling }) {
   const navigate = useNavigate()
   const canEdit  = !roadmap.isPublished
 
@@ -225,10 +266,10 @@ function MentorCard({ roadmap, onTogglePublish, toggling }) {
       </div>
     </motion.div>
   )
-}
+})
 
 /* ─── Skeleton ─────────────────────────────────────────────────── */
-function SkeletonCard() {
+const SkeletonCard = memo(function SkeletonCard() {
   return (
     <div className="dash-card overflow-hidden">
       <div className="shimmer h-40" />
@@ -240,71 +281,109 @@ function SkeletonCard() {
       </div>
     </div>
   )
-}
+})
 
 /* ─── Main page ─────────────────────────────────────────────────── */
 export default function RoadmapsPage() {
-  const { user }   = useAuthStore()
-  const navigate   = useNavigate()
-  const isMentor   = user?.role === 'mentor'
+  const { user }    = useAuthStore()
+  const navigate    = useNavigate()
+  const queryClient = useQueryClient()
+  const isMentor    = user?.role === 'mentor'
+  const isLearner   = user?.role === 'learner'
 
-  /* state */
-  const [roadmaps, setRoadmaps]         = useState([])
-  const [loading, setLoading]           = useState(true)
-  const [pagination, setPagination]     = useState({})
-  const [page, setPage]                 = useState(1)
+  /* ui state */
+  const [page,         setPage]         = useState(1)
   const [mobileFilter, setMobileFilter] = useState(false)
-  const [toggling, setToggling]         = useState(null)
+  const [toggling,     setToggling]     = useState(null)
+  const [following,    setFollowing]    = useState(null)
 
-  /* learner filters only (mentor sees all own) */
+  /* learner filters */
   const [search, setSearch] = useState('')
   const [domain, setDomain] = useState('')
   const [level,  setLevel]  = useState('')
   const [isPaid, setIsPaid] = useState('')
 
-  /* ── fetch ──────────────────────────────────────────────────── */
-  const fetchRoadmaps = useCallback(() => {
-    setLoading(true)
-    if (isMentor) {
-      roadmapService
-        .getMyroadmap()
-        .then((res) => {
-          setRoadmaps(res.data ?? [])
-          setPagination({})
-        })
-        .catch(() => setRoadmaps([]))
-        .finally(() => setLoading(false))
-    } else {
-      const params = { page, limit: 12 }
-      if (search) params.title  = search
-      if (domain) params.domain = domain
-      if (level)  params.level  = level
-      if (isPaid !== '') params.isPaid = isPaid
-
-      roadmapService
-        .getPublished(params)
-        .then((res) => {
-          setRoadmaps(res.data ?? [])
-          setPagination(res.pagination ?? {})
-        })
-        .catch(() => setRoadmaps([]))
-        .finally(() => setLoading(false))
-    }
-  }, [isMentor, page, search, domain, level, isPaid])
-
+  /* ── Learner: published roadmaps ────────────────────────────── */
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   useEffect(() => {
-    const id = setTimeout(fetchRoadmaps, isMentor ? 0 : 300)
+    const id = setTimeout(() => setDebouncedSearch(search), 300)
     return () => clearTimeout(id)
-  }, [fetchRoadmaps, isMentor])
+  }, [search])
+
+  const learnerParams = { page, limit: 12,
+    ...(debouncedSearch && { title: debouncedSearch }),
+    ...(domain   && { domain }),
+    ...(level    && { level }),
+    ...(isPaid !== '' && { isPaid }),
+  }
+
+  const {
+    data:  learnerData,
+    isLoading: learnerLoading,
+    isFetching: learnerFetching,
+  } = useQuery({
+    queryKey: ['roadmaps', 'published', learnerParams],
+    queryFn:  () => roadmapService.getPublished(learnerParams),
+    enabled:  !isMentor,
+    keepPreviousData: true,
+    staleTime: 30_000,
+  })
+
+  /* ── Learner: enrollments ───────────────────────────────────── */
+  const { data: enrollmentsData } = useQuery({
+    queryKey: ['enrollments', 'me'],
+    queryFn:  () => enrollmentService.getMyEnrollments(),
+    enabled:  isLearner,
+    staleTime: 30_000,
+  })
+
+  const enrolledIds = new Set(
+    (enrollmentsData?.enrollments ?? enrollmentsData?.data ?? []).map(
+      e => e.roadmapId?._id ?? e.roadmapId
+    )
+  )
+
+  /* ── Learner: follow mutation ───────────────────────────────── */
+  const followMutation = useMutation({
+    mutationFn: (roadmapId) => enrollmentService.enroll(roadmapId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['enrollments', 'me'] })
+    },
+  })
+
+  const handleFollow = async (roadmapId) => {
+    setFollowing(roadmapId)
+    try {
+      await followMutation.mutateAsync(roadmapId)
+      navigate(`/learn/${roadmapId}`)
+    } catch (_) {}
+    setFollowing(null)
+  }
+
+  /* ── Mentor: own roadmaps ───────────────────────────────────── */
+  const {
+    data:      mentorData,
+    isLoading: mentorLoading,
+  } = useQuery({
+    queryKey: ['roadmaps', 'me'],
+    queryFn:  () => roadmapService.getMyroadmap(),
+    enabled:  isMentor,
+    staleTime: 30_000,
+  })
+
+  /* ── Derived ─────────────────────────────────────────────────── */
+  const roadmaps   = isMentor
+    ? (mentorData?.data ?? mentorData ?? [])
+    : (learnerData?.data ?? learnerData?.roadmaps ?? [])
+  const pagination = learnerData?.pagination ?? {}
+  const loading    = isMentor ? mentorLoading : (learnerLoading && !learnerFetching)
 
   /* ── mentor publish toggle ──────────────────────────────────── */
   const handleTogglePublish = async (id) => {
     setToggling(id)
     try {
       await roadmapService.togglePublish(id)
-      setRoadmaps((prev) =>
-        prev.map((r) => r._id === id ? { ...r, isPublished: !r.isPublished } : r)
-      )
+      queryClient.invalidateQueries({ queryKey: ['roadmaps', 'me'] })
     } catch (_) {}
     setToggling(null)
   }
@@ -530,7 +609,15 @@ export default function RoadmapsPage() {
                         toggling={toggling}
                       />
                     ))
-                  : roadmaps.map((rm) => <LearnerCard key={rm._id} {...rm} />)
+                  : roadmaps.map((rm) => (
+                      <LearnerCard
+                        key={rm._id}
+                        {...rm}
+                        enrolled={enrolledIds.has(rm._id)}
+                        onFollow={handleFollow}
+                        following={following}
+                      />
+                    ))
                 }
               </motion.div>
 

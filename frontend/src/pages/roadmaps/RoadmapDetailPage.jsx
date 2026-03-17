@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, Star, Users, BookOpen, ChevronDown, ChevronUp,
   CheckSquare, Square, ExternalLink, Folder, Link as LinkIcon,
-  Loader2, AlertCircle, UserCircle, BadgeCheck, Edit2,
+  Loader2, AlertCircle, UserCircle, BadgeCheck, Edit2, PlayCircle,
 } from 'lucide-react'
 import roadmapService from '../../services/roadmapService'
 import enrollmentService from '../../services/enrollmentService'
@@ -418,18 +418,29 @@ export default function RoadmapDetailPage() {
               )}
 
               {isLearner && (
-                <button
-                  onClick={handleEnroll}
-                  disabled={enrolling}
-                  className={`w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-[14px] transition-all ${
-                    enrolled
-                      ? 'bg-gray-100 text-dash-text hover:bg-gray-200'
-                      : 'dash-btn-primary'
-                  }`}
-                >
-                  {enrolling ? <Loader2 size={16} className="animate-spin" /> : null}
-                  {enrolled ? 'Unfollow Roadmap' : 'Follow Roadmap'}
-                </button>
+                <div className="flex flex-col gap-2">
+                  {enrolled && (
+                    <button
+                      onClick={() => navigate(`/learn/${roadmapId}`)}
+                      className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-[14px] dash-btn-primary"
+                    >
+                      <PlayCircle size={16} />
+                      {doneTasks > 0 ? 'Continue Learning' : 'Start Learning'}
+                    </button>
+                  )}
+                  <button
+                    onClick={handleEnroll}
+                    disabled={enrolling}
+                    className={`w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-[14px] transition-all ${
+                      enrolled
+                        ? 'bg-gray-100 text-dash-text hover:bg-gray-200'
+                        : 'dash-btn-primary'
+                    }`}
+                  >
+                    {enrolling ? <Loader2 size={16} className="animate-spin" /> : null}
+                    {enrolled ? 'Unfollow Roadmap' : 'Follow Roadmap'}
+                  </button>
+                </div>
               )}
 
               {isLearner && totalTasks > 0 && (
